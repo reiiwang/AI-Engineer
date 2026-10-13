@@ -1,0 +1,37 @@
+# Paths are relative to this file.
+raw_dir: raw            # put source markdown here (subfolders are fine)
+wiki_dir: wiki          # generated wiki
+state_dir: .wiki_state  # canonical wiki model + LLM call log; do not edit by hand
+include: ["**/*.md"]
+
+language: English
+granularity: standard   # focused | standard | exhaustive
+extraction_instructions: ""   # extra rules for entity/concept extraction
+content_instructions: ""      # extra rules for writing page content
+
+chunk_size: 1000        # characters per citation chunk
+max_content_chars: 32768
+docs_per_batch: 5
+map_parallel: 4
+reduce_parallel: 8
+log_llm_calls: true     # append every request/response to .wiki_state/llm_calls.jsonl
+
+llm:
+  base_url: https://api.openai.com/v1   # any OpenAI-compatible endpoint (vLLM, Ollama, Azure...)
+  model: gpt-6-luna
+  api_key_env: OPENAI_API_KEY           # read from llm-wiki/.env first, then the shell env
+  temperature: null       # gpt-6-luna only accepts the default; null = don't send it
+  max_tokens: 10000
+  token_param: max_completion_tokens   # gpt-6-luna rejects max_tokens; use max_tokens for vLLM/Ollama
+  timeout: 300
+  max_concurrency: 8
+  extra_body: {}
+
+# Options read by wikibuilder/wiki_format.py (the golden-format adapter).
+format:
+  link_style: markdown    # wikilink -> [[entity/x|X]]   markdown -> [X](../entity/x.md)
+  link_text: title        # title -> target page's title   display -> text the LLM wrote
+  link_base_url: ""       # "" -> relative path; e.g. https://wiki.example.com -> absolute URL
+  ensure_h1: true
+  sources_section: false
+  index_path: index.md

@@ -1,0 +1,5 @@
+.wiki_state/
+__pycache__/
+.venv/
+.wiki/
+.env
