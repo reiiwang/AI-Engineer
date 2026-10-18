@@ -21,7 +21,7 @@
 
 ## 1. `weknora-ui`（`frontend/Dockerfile`）
 
-三個映像檔裡最容易 build 的一個，不過還是有兩個陷阱。
+三個映像檔裡最容易 build 的一個，不過還是有兩個陷阱。完整的 build 步驟見 [`build-weknora-ui.md`](build-weknora-ui.md)。
 
 | 問題 | 原因 | 位置 | 怎麼解 |
 |---|---|---|---|
