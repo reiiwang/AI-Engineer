@@ -1,0 +1,85 @@
+# WeKnora 精簡版：只用 wiki（手動輸入文字），映像檔從公司 Harbor 拉
+# 只有 4 個服務：frontend、app、postgres、redis（沒有 docreader）
+# 從 WeKnora v0.8.2 的 docker-compose.yml 精簡而來
+
+services:
+  frontend:
+    image: ${REGISTRY}/wechatopenai/weknora-ui:${WEKNORA_VERSION}
+    container_name: WeKnora-frontend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    environment:
+      - APP_HOST=app
+      - APP_PORT=8080
+      - APP_SCHEME=http
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - WeKnora-network
+    restart: unless-stopped
+
+  app:
+    image: ${REGISTRY}/wechatopenai/weknora-app:${WEKNORA_VERSION}
+    container_name: WeKnora-app
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - data-files:/data/files
+      # 要改 config.yaml（例如摘要的 max_completion_tokens）時才打開，做法見 README
+      # - ./config/config.yaml:/app/config/config.yaml
+    env_file:
+      - .env
+    environment:
+      - DOCREADER_ADDR=        # 不接 docreader，app 以未連線狀態啟動
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - WeKnora-network
+    restart: unless-stopped
+
+  postgres:
+    image: ${REGISTRY}/paradedb/paradedb:v0.25.11-pg17
+    container_name: WeKnora-postgres
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - WeKnora-network
+    restart: unless-stopped
+    stop_grace_period: 1m
+
+  redis:
+    # Docker Hub 官方映像檔透過 Harbor 代理時，要加 library/
+    image: ${REGISTRY}/library/redis:7.0-alpine
+    container_name: WeKnora-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    networks:
+      - WeKnora-network
+    restart: always
+
+networks:
+  WeKnora-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  data-files:
